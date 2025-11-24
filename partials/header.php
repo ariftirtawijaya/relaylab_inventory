@@ -48,6 +48,7 @@
                             <li><a class="dropdown-item" href="categories.php">Kategori</a></li>
                             <li><a class="dropdown-item" href="packs.php">Jenis Pack</a></li>
                             <li><a class="dropdown-item" href="bom.php">BOM Produk</a></li>
+                            <li><a class="dropdown-item" href="suppliers.php">Supplier</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
@@ -65,12 +66,14 @@
                             <li><a class="dropdown-item" href="stock_in.php">Barang Masuk</a></li>
                             <li><a class="dropdown-item" href="stock_in_pack.php">Barang Masuk (Pack)</a></li>
                             <li><a class="dropdown-item" href="stock_out.php">Barang Keluar</a></li>
+                            <li><a class="dropdown-item" href="purchases.php">Pembelian (PO)</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
                             <li><a class="dropdown-item" href="produce.php">Produksi</a></li>
                         </ul>
                     </li>
+
 
                     <!-- LAPORAN -->
                     <li class="nav-item dropdown">
