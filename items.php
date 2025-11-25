@@ -1,10 +1,22 @@
 <?php
 // items.php - Master Barang (full CRUD)
 require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/partials/header.php';
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
 
 $errors = [];
 $success = '';
+
+// ambil flash dari session (jika ada)
+if (!empty($_SESSION['flash_success'])) {
+  $success = $_SESSION['flash_success'];
+  unset($_SESSION['flash_success']);
+}
+if (!empty($_SESSION['flash_errors']) && is_array($_SESSION['flash_errors'])) {
+  $errors = $_SESSION['flash_errors'];
+  unset($_SESSION['flash_errors']);
+}
 
 // Ambil kategori & satuan untuk dropdown
 $categories = $pdo->query("SELECT id, name FROM categories ORDER BY name")->fetchAll();
@@ -15,7 +27,6 @@ if (isset($_GET['delete'])) {
   $id = (int) $_GET['delete'];
   if ($id > 0) {
     try {
-      // cek apakah item sudah dipakai di stock_movements, bom, atau package_components
       $totalRef = 0;
 
       $stmt = $pdo->prepare("SELECT COUNT(*) AS jml FROM stock_movements WHERE item_id = :id");
@@ -34,17 +45,21 @@ if (isset($_GET['delete'])) {
       $totalRef += (int) ($row['jml'] ?? 0);
 
       if ($totalRef > 0) {
-        $errors[] = 'Barang tidak bisa dihapus karena sudah dipakai di stok / BOM / Pack.';
+        $_SESSION['flash_errors'] = ['Barang tidak bisa dihapus karena sudah dipakai di stok / BOM / Pack.'];
       } else {
         $stmt = $pdo->prepare("DELETE FROM items WHERE id = :id");
         $stmt->execute([':id' => $id]);
-        $success = 'Barang berhasil dihapus.';
+        $_SESSION['flash_success'] = 'Barang berhasil dihapus.';
       }
     } catch (Throwable $e) {
-      $errors[] = 'Gagal menghapus barang: ' . $e->getMessage();
+      $_SESSION['flash_errors'] = ['Gagal menghapus barang: ' . $e->getMessage()];
     }
   }
+
+  header('Location: items.php');
+  exit;
 }
+
 
 // Tambah / Update item
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -71,11 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if (!$errors) {
     if ($action === 'add') {
-      // insert baru
       $stmt = $pdo->prepare("
-                INSERT INTO items (category_id, name, unit_id, min_stock, notes)
-                VALUES (:cat, :name, :unit, :min_stock, :notes)
-            ");
+        INSERT INTO items (category_id, name, unit_id, min_stock, notes)
+        VALUES (:cat, :name, :unit, :min_stock, :notes)
+      ");
       try {
         $stmt->execute([
           ':cat' => $category_id,
@@ -84,21 +98,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           ':min_stock' => $min_stock,
           ':notes' => $notes,
         ]);
-        $success = 'Barang baru berhasil ditambahkan.';
+        $_SESSION['flash_success'] = 'Barang baru berhasil ditambahkan.';
       } catch (Throwable $e) {
         $errors[] = 'Gagal menambah barang: ' . $e->getMessage();
       }
     } elseif ($action === 'update' && $id > 0) {
-      // update
       $stmt = $pdo->prepare("
-                UPDATE items
-                SET category_id = :cat,
-                    name        = :name,
-                    unit_id     = :unit,
-                    min_stock   = :min_stock,
-                    notes       = :notes
-                WHERE id = :id
-            ");
+        UPDATE items
+        SET category_id = :cat,
+            name        = :name,
+            unit_id     = :unit,
+            min_stock   = :min_stock,
+            notes       = :notes
+        WHERE id = :id
+      ");
       try {
         $stmt->execute([
           ':cat' => $category_id,
@@ -108,19 +121,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           ':notes' => $notes,
           ':id' => $id,
         ]);
-        $success = 'Data barang berhasil diupdate.';
+        $_SESSION['flash_success'] = 'Data barang berhasil diupdate.';
       } catch (Throwable $e) {
         $errors[] = 'Gagal mengupdate barang: ' . $e->getMessage();
       }
     }
 
     if (!$errors) {
-      // redirect untuk hindari resubmit form
+      header('Location: items.php');
+      exit;
+    } else {
+      // kalau ada error, simpan juga ke flash lalu redirect (opsional)
+      $_SESSION['flash_errors'] = $errors;
       header('Location: items.php');
       exit;
     }
+  } else {
+    // validasi gagal sebelum query
+    $_SESSION['flash_errors'] = $errors;
+    header('Location: items.php');
+    exit;
   }
 }
+
+require_once __DIR__ . '/partials/header.php';
+
 
 // Ambil semua barang untuk tabel
 $sql = "
