@@ -1,7 +1,7 @@
 <?php
 // stock_in.php
 require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/partials/header.php';
+
 
 $success = '';
 $errors = [];
@@ -100,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
   }
 }
+require_once __DIR__ . '/partials/header.php';
 
 // Ambil 50 data IN terakhir
 $logs = $pdo->query("
@@ -153,15 +154,15 @@ $logs = $pdo->query("
 
             <div class="mb-3">
               <label class="form-label">Pilih Barang</label>
-              <select name="item_id" class="form-select form-select-sm" required>
+              <select name="item_id" class="form-select form-select-sm select2-item" required>
                 <option value="">-- Pilih Barang --</option>
                 <?php foreach ($items as $it): ?>
                   <option value="<?= $it['id'] ?>" <?= isset($edit_row['item_id']) && $edit_row['item_id'] == $it['id'] ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($it['category_name']) ?> —
                     <?= htmlspecialchars($it['name']) ?> (<?= $it['unit_code'] ?>)
                   </option>
                 <?php endforeach; ?>
               </select>
+
             </div>
 
             <div class="mb-3">
@@ -263,5 +264,7 @@ $logs = $pdo->query("
     </div>
   </div>
 </div>
+
+
 
 <?php require_once __DIR__ . '/partials/footer.php'; ?>

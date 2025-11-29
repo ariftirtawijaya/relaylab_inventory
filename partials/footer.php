@@ -6,6 +6,12 @@
 <!-- jQuery (wajib untuk DataTables) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
+<!-- Select2 CSS & JS (untuk dropdown dengan search) -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+    rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <!-- DataTables core + Bootstrap 5 integration -->
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
@@ -23,6 +29,17 @@
             language: {
                 url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/id.json'
             }
+        });
+    });
+</script>
+<script>
+    $(function () {
+        // Select2 untuk dropdown barang (dan bisa dipakai di halaman lain juga)
+        $('.select2-item').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: '-- Pilih Barang --',
+            allowClear: true
         });
     });
 </script>
