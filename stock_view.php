@@ -81,8 +81,9 @@ $rows = $pdo->query($sql)->fetchAll();
                             $min = (float) $r['min_stock'];
                             $good = (float) $r['stock_good'];
                             $isLow = ($min > 0 && $good < $min);
+                            $isMin = ($min > 0 && $good == $min);
                             ?>
-                            <tr class="<?= $isLow ? 'table-danger' : '' ?>">
+                            <tr class="<?= $isLow ? 'table-danger' : ($isMin ? 'table-warning' : '') ?>">
                                 <td class="text-center"><?= $no++ ?></td>
                                 <td>
                                     <a href="stock_card.php?item_id=<?= $r['id'] ?>">
