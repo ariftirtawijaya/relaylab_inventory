@@ -15,6 +15,7 @@ $stmt = $pdo->prepare("
         i.id,
         i.name,
         u.code AS unit,
+        u.name AS satuan,
         COALESCE(SUM(
             IF(sm.stock_type='GOOD',
                 IF(sm.movement_type='IN', sm.qty,
