@@ -1,17 +1,13 @@
 <?php
 require_once __DIR__ . '/config/db.php';
 
-// Ambil items
+// Ambil semua kategori
 $stmt = $pdo->query("
-    SELECT 
-        items.id,
-        items.name,
-        (SELECT name FROM categories WHERE categories.id = items.category_id) AS category_name
-    FROM items
-    ORDER BY category_id, name
+    SELECT id, name
+    FROM categories
+    ORDER BY name
 ");
-
-$items = $stmt->fetchAll();
+$cats = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -20,7 +16,7 @@ $items = $stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>QR Code Produk</title>
+    <title>QR Code Kategori</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
@@ -43,14 +39,9 @@ $items = $stmt->fetchAll();
             object-fit: contain;
         }
 
-        .item-name {
+        .cat-name {
             font-size: 1rem;
             font-weight: bold;
-        }
-
-        .item-cat {
-            font-size: 0.85rem;
-            color: #6c757d;
         }
     </style>
 </head>
@@ -58,26 +49,24 @@ $items = $stmt->fetchAll();
 <body>
 
     <div class="container">
+        <h2 class="mb-4 text-center fw-bold">Daftar QR Code Kategori</h2>
 
-        <h2 class="mb-4 text-center fw-bold">Daftar QR Code Produk</h2>
-
-        <?php if (!$items): ?>
-            <div class="alert alert-warning text-center">Belum ada item terdaftar.</div>
+        <?php if (!$cats): ?>
+            <div class="alert alert-warning text-center">Belum ada kategori.</div>
         <?php else: ?>
 
             <div class="row g-3">
 
-                <?php foreach ($items as $it): ?>
-                    <?php $qrLink = "qr.php?id=" . $it['id']; ?>
+                <?php foreach ($cats as $c): ?>
+                    <?php $qrLink = "qr.php?id=" . $c['id']; ?>
 
                     <div class="col-6 col-md-4 col-lg-3">
                         <div class="qr-box">
                             <img src="<?= $qrLink ?>" class="qr-img mb-2">
 
-                            <div class="item-name"><?= htmlspecialchars($it['name']) ?></div>
-                            <div class="item-cat"><?= htmlspecialchars($it['category_name']) ?></div>
+                            <div class="cat-name"><?= htmlspecialchars($c['name']) ?></div>
 
-                            <a href="<?= $qrLink ?>" download="QR_<?= $it['id'] ?>.png" class="btn btn-sm btn-primary mt-2">
+                            <a href="<?= $qrLink ?>" download="QR_CAT_<?= $c['id'] ?>.png" class="btn btn-sm btn-primary mt-2">
                                 Download
                             </a>
                         </div>
@@ -88,7 +77,6 @@ $items = $stmt->fetchAll();
             </div>
 
         <?php endif; ?>
-
     </div>
 
 </body>

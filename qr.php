@@ -1,21 +1,16 @@
 <?php
 require_once __DIR__ . '/libs/phpqrcode/qrlib.php';
 
+// ambil id kategori, bukan item
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($id <= 0) {
     exit('Invalid QR');
 }
 
-// URL tujuan QR
-$baseUrl = (isset($_SERVER['HTTPS']) ? "https://" : "http://")
-    . $_SERVER['HTTP_HOST']
-    . rtrim(dirname($_SERVER['PHP_SELF']), '/');
+// URL tujuan QR → API kategori
+$link = "https://relaylab.id/inventory/api/category.php?id=" . $id;
 
-$link = $baseUrl . "/scan.php?id=" . $id;
-
-// Header PNG
+// output QR PNG
 header('Content-Type: image/png');
-
-// Generate langsung output PNG
 QRcode::png($link, false, QR_ECLEVEL_H, 6);
 exit;

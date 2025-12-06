@@ -1,18 +1,15 @@
 <?php
 require_once __DIR__ . '/config/db.php';
 
-// Ambil semua item
-$stmt = $pdo->query("
-    SELECT 
-        items.id,
-        items.name,
-        (SELECT name FROM categories WHERE categories.id = items.category_id) AS category_name
-    FROM items
-    ORDER BY category_id, name
+// Ambil kategori kecuali "PRODUK JADI"
+$stmt = $pdo->prepare("
+    SELECT id, name
+    FROM categories
+    WHERE name <> 'PRODUK JADI'
+    ORDER BY name
 ");
-
-$items = $stmt->fetchAll();
-
+$stmt->execute();
+$cats = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -21,59 +18,44 @@ $items = $stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>QR Print Sheet - A4</title>
+    <title>QR Print Sheet - Kategori</title>
 
     <style>
         @page {
             size: A4;
-            margin: 10mm;
+            margin: 0;
         }
 
         body {
-            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
         }
 
-        .sheet {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 5mm;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-gap: 12mm;
+        /* Container untuk 1 halaman penuh */
+        .page {
+            width: 100vw;
+            height: 100vh;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            page-break-after: always;
         }
 
-        .qr-cell {
-            width: 100%;
-            border: 1px solid #ddd;
-            padding: 6mm;
-            text-align: center;
-            border-radius: 6px;
-            page-break-inside: avoid;
-        }
-
+        /* QR besar */
         .qr-img {
-            width: 45mm;
-            height: 45mm;
-            margin-bottom: 4mm;
+            width: 90mm;
+            height: 90mm;
+            margin-bottom: 10mm;
         }
 
         .name {
+            font-size: 28px;
             font-weight: bold;
-            font-size: 13px;
-            margin-bottom: 2mm;
-        }
-
-        .cat {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 1mm;
-        }
-
-        .id-tag {
-            font-size: 10px;
-            color: #444;
+            text-align: center;
         }
 
         @media print {
@@ -87,28 +69,22 @@ $items = $stmt->fetchAll();
 
 <body>
 
-    <div class="no-print" style="padding: 15px; text-align:center;">
-        <h2>QR Print Sheet (A4)</h2>
-        <p>Cetak langsung menggunakan Ctrl + P</p>
-        <a href="qr_list.php">⬅ Kembali ke Daftar QR</a>
+    <div class="no-print" style="padding: 20px; text-align:center;">
+        <h2>QR Print Sheet Kategori (1 QR per Halaman)</h2>
+        <p>Kategori <b>PRODUK JADI</b> otomatis di-skip</p>
+        <a href="qr_list.php">⬅ Kembali ke Daftar</a>
+        <hr style="margin-top:20px;">
     </div>
 
-    <div class="sheet">
+    <?php foreach ($cats as $c): ?>
+        <?php $qrLink = "qr.php?id=" . $c['id']; ?>
 
-        <?php foreach ($items as $it): ?>
+        <div class="page">
+            <img src="<?= $qrLink ?>" class="qr-img">
+            <div class="name"><?= htmlspecialchars($c['name']) ?></div>
+        </div>
 
-            <?php $qrLink = "qr.php?id=" . $it['id']; ?>
-
-            <div class="qr-cell">
-                <img src="<?= $qrLink ?>" class="qr-img">
-
-                <div class="name"><?= htmlspecialchars($it['name']) ?></div>
-                <div class="cat"><?= htmlspecialchars($it['category_name']) ?></div>
-            </div>
-
-        <?php endforeach; ?>
-
-    </div>
+    <?php endforeach; ?>
 
 </body>
 
