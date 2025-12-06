@@ -9,6 +9,7 @@ SELECT
   i.name, 
   c.name AS category,
   u.code AS unit,
+  u.name AS satuan,
   COALESCE(SUM(
     IF(sm.stock_type='GOOD',
       IF(sm.movement_type='IN', sm.qty,
