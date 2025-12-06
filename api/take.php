@@ -14,7 +14,7 @@ if ($id <= 0 || $qty <= 0) {
 $ins = $pdo->prepare("
 INSERT INTO stock_movements 
 (item_id, movement_type, stock_type, qty, description)
-VALUES (?, 'OUT', 'GOOD', ?, '')
+VALUES (?, 'OUT', 'GOOD', ?, 'Update stock dari APP')
 ");
 $ins->execute([$id, $qty]);
 
