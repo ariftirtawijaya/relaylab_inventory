@@ -12,10 +12,10 @@ function telegram_send_message(string $text): bool
     $token = TELEGRAM_BOT_TOKEN;
     $chatIds = TELEGRAM_CHAT_IDS;
 
-    // Telegram limit per message = 4096 chars
-    $MAX = 3900; // sedikit dikurangi untuk margin parse_mode
+    // Maksimal karakter Telegram = 4096, kita pakai batas aman
+    $MAX = 3900;
 
-    // Pecah menjadi chunk
+    // Pecah menjadi chunk tanpa header tambahan
     $messages = [];
     $length = strlen($text);
 
@@ -28,14 +28,11 @@ function telegram_send_message(string $text): bool
     foreach ($chatIds as $chatId) {
         echo "\n=== KIRIM KE {$chatId} ===\n";
 
-        foreach ($messages as $index => $msg) {
-            $header = (count($messages) > 1)
-                ? "**Bagian " . ($index + 1) . "/" . count($messages) . "**\n\n"
-                : "";
+        foreach ($messages as $msg) {
 
             $payload = [
                 'chat_id' => $chatId,
-                'text' => $header . $msg,
+                'text' => $msg,
                 'parse_mode' => 'Markdown',
             ];
 
@@ -50,7 +47,6 @@ function telegram_send_message(string $text): bool
 
             $response = curl_exec($ch);
             $error = curl_error($ch);
-
             curl_close($ch);
 
             var_dump($response);
