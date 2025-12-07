@@ -12,42 +12,56 @@ function telegram_send_message(string $text): bool
     $token = TELEGRAM_BOT_TOKEN;
     $chatIds = TELEGRAM_CHAT_IDS;
 
-    $url = "https://api.telegram.org/bot{$token}/sendMessage";
+    // Telegram limit per message = 4096 chars
+    $MAX = 3900; // sedikit dikurangi untuk margin parse_mode
 
-    $all_success = true;
+    // Pecah menjadi chunk
+    $messages = [];
+    $length = strlen($text);
+
+    for ($i = 0; $i < $length; $i += $MAX) {
+        $messages[] = substr($text, $i, $MAX);
+    }
+
+    $success = true;
 
     foreach ($chatIds as $chatId) {
-
         echo "\n=== KIRIM KE {$chatId} ===\n";
 
-        $data = [
-            'chat_id' => $chatId,
-            'text' => $text,
-            'parse_mode' => 'Markdown',
-        ];
+        foreach ($messages as $index => $msg) {
+            $header = (count($messages) > 1)
+                ? "**Bagian " . ($index + 1) . "/" . count($messages) . "**\n\n"
+                : "";
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($data),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => false,   // penting! hosting bisa error SSL
-        ]);
+            $payload = [
+                'chat_id' => $chatId,
+                'text' => $header . $msg,
+                'parse_mode' => 'Markdown',
+            ];
 
-        $response = curl_exec($ch);
-        $error = curl_error($ch);
+            $ch = curl_init("https://api.telegram.org/bot{$token}/sendMessage");
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => http_build_query($payload),
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
 
-        curl_close($ch);
+            $response = curl_exec($ch);
+            $error = curl_error($ch);
 
-        var_dump($response);
-        echo "\n";
+            curl_close($ch);
 
-        if ($response === false) {
-            echo "CURL ERROR: $error\n";
-            $all_success = false;
+            var_dump($response);
+            echo "\n";
+
+            if ($response === false) {
+                echo "CURL ERROR: $error\n";
+                $success = false;
+            }
         }
     }
 
-    return $all_success;
+    return $success;
 }
