@@ -3,10 +3,14 @@
 // -------------------
 
 // Isi BOT TOKEN dari @BotFather
-define('TELEGRAM_BOT_TOKEN', '8079678971:AAFvuZWFzxsfMKHj1J4F4tY7YRZn4vF3ErM');
+define('TELEGRAM_BOT_TOKEN', '7968450422:AAHyoyMT6OUcw_fk9iCeQ7h78P42mBJvFS0');
 
 // Isi CHAT ID pribadi atau grup
-define('TELEGRAM_CHAT_ID', '318416641');
+define('TELEGRAM_CHAT_IDS', [
+    '318416641',    // Akun Arif
+    '8300371133',    // Akun kedua (isi dengan chat_id baru)
+]);
+
 
 
 /**
@@ -16,7 +20,7 @@ define('TELEGRAM_CHAT_ID', '318416641');
 function telegram_send_message(string $text): bool
 {
     $token = TELEGRAM_BOT_TOKEN;
-    $chatId = TELEGRAM_CHAT_ID;
+    $chatId = TELEGRAM_CHAT_IDS;
 
     // Telegram max 4096 chars per message
     $maxLength = 4000; // lebih aman daripada 4096
