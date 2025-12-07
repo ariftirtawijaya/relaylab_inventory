@@ -11,8 +11,6 @@ define('TELEGRAM_CHAT_IDS', [
     '8300371133',    // Akun kedua (isi dengan chat_id baru)
 ]);
 
-
-
 /**
  * Mengirim pesan Telegram.
  * Menampilkan pesan error jika gagal.
@@ -39,7 +37,6 @@ function telegram_send_message(string $text): bool
             $data = [
                 'chat_id' => $chatId,
                 'text' => $chunk,
-                'parse_mode' => null,  // Tidak pakai Markdown apa pun = AMAN
             ];
 
             $options = [
