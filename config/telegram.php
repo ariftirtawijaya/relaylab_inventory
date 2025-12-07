@@ -1,72 +1,53 @@
 <?php
-// config/telegram.php
-// -------------------
 
-// Isi BOT TOKEN dari @BotFather
 define('TELEGRAM_BOT_TOKEN', '7968450422:AAHyoyMT6OUcw_fk9iCeQ7h78P42mBJvFS0');
 
-// Isi CHAT ID pribadi atau grup
 define('TELEGRAM_CHAT_IDS', [
-    '318416641',    // Akun Arif
-    '8300371133',    // Akun kedua (isi dengan chat_id baru)
+    '318416641',
+    '8300371133',
 ]);
 
-/**
- * Mengirim pesan Telegram.
- * Menampilkan pesan error jika gagal.
- */
 function telegram_send_message(string $text): bool
 {
     $token = TELEGRAM_BOT_TOKEN;
     $chatIds = TELEGRAM_CHAT_IDS;
 
-    if (empty($token) || empty($chatIds)) {
-        return false;
-    }
-
     $url = "https://api.telegram.org/bot{$token}/sendMessage";
 
-    // Maksimal aman 3500 karakter
-    $chunks = str_split($text, 3500);
-
-    $success = true;
+    $all_success = true;
 
     foreach ($chatIds as $chatId) {
-        foreach ($chunks as $chunk) {
 
-            $data = [
-                'chat_id' => $chatId,
-                'text' => $chunk,
-            ];
+        echo "\n=== KIRIM KE {$chatId} ===\n";
 
-            $options = [
-                'http' => [
-                    'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-                    'method' => 'POST',
-                    'content' => http_build_query($data),
-                    'timeout' => 10,
-                ],
-            ];
+        $data = [
+            'chat_id' => $chatId,
+            'text' => $text,
+            'parse_mode' => 'Markdown',
+        ];
 
-            $context = stream_context_create($options);
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($data),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,   // penting! hosting bisa error SSL
+        ]);
 
-            $result = @file_get_contents($url, false, $context);
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
 
-            echo "\n--- SEND TO {$chatId} ---\n";
-            var_dump($result);
+        curl_close($ch);
 
-            if ($result === false) {
-                $success = false;
-            } else {
-                $json = json_decode($result, true);
-                if (!$json['ok']) {
-                    echo "\nERROR JSON:\n";
-                    var_dump($json);
-                    $success = false;
-                }
-            }
+        var_dump($response);
+        echo "\n";
+
+        if ($response === false) {
+            echo "CURL ERROR: $error\n";
+            $all_success = false;
         }
     }
 
-    return $success;
+    return $all_success;
 }
