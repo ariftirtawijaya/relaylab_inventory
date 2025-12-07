@@ -3,6 +3,11 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/telegram.php';
 
 date_default_timezone_set('Asia/Jakarta');
+function fmt($num)
+{
+    return rtrim(rtrim(number_format($num, 2, '.', ''), '0'), '.');
+}
+
 
 // Ambil semua item yang stok_good < min_stock
 $sql = "
@@ -61,8 +66,8 @@ foreach ($grouped as $cat => $items) {
     $message .= "📂 {$cat}\n";
 
     foreach ($items as $i) {
-        $message .= "— {$i['name']} ({$i['unit_code']})\n";
-        $message .= "   Stok: {$i['stock_good']} / Min: {$i['min_stock']}\n";
+        $message .= "— {$i['name']} \n";
+        $message .= "   Stok: " . fmt($i['stock_good']) . " / Min: " . fmt($i['min_stock']) . " {$i['unit_code']}\n";
     }
 
     $message .= "\n";
