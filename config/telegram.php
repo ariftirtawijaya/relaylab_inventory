@@ -20,45 +20,56 @@ define('TELEGRAM_CHAT_IDS', [
 function telegram_send_message(string $text): bool
 {
     $token = TELEGRAM_BOT_TOKEN;
-    $chatId = TELEGRAM_CHAT_IDS;
+    $chatIds = TELEGRAM_CHAT_IDS;
 
-    // Telegram max 4096 chars per message
-    $maxLength = 4000; // lebih aman daripada 4096
-    $chunks = str_split($text, $maxLength);
+    if (empty($token) || empty($chatIds)) {
+        return false;
+    }
 
-    foreach ($chunks as $chunk) {
-        $url = "https://api.telegram.org/bot{$token}/sendMessage";
+    $url = "https://api.telegram.org/bot{$token}/sendMessage";
 
-        $data = [
-            'chat_id' => $chatId,
-            'text' => $chunk,
-        ];
+    // Maksimal aman 3500 karakter
+    $chunks = str_split($text, 3500);
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $data,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
-        ]);
+    $success = true;
 
-        $response = curl_exec($ch);
-        $error = curl_error($ch);
-        curl_close($ch);
+    foreach ($chatIds as $chatId) {
+        foreach ($chunks as $chunk) {
 
-        echo "\n--- TELEGRAM RESPONSE ---\n";
-        var_dump($response);
+            $data = [
+                'chat_id' => $chatId,
+                'text' => $chunk,
+                'parse_mode' => null,  // Tidak pakai Markdown apa pun = AMAN
+            ];
 
-        if ($error) {
-            echo "\n--- TELEGRAM CURL ERROR ---\n";
-            var_dump($error);
-            return false;
+            $options = [
+                'http' => [
+                    'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                    'method' => 'POST',
+                    'content' => http_build_query($data),
+                    'timeout' => 10,
+                ],
+            ];
+
+            $context = stream_context_create($options);
+
+            $result = @file_get_contents($url, false, $context);
+
+            echo "\n--- SEND TO {$chatId} ---\n";
+            var_dump($result);
+
+            if ($result === false) {
+                $success = false;
+            } else {
+                $json = json_decode($result, true);
+                if (!$json['ok']) {
+                    echo "\nERROR JSON:\n";
+                    var_dump($json);
+                    $success = false;
+                }
+            }
         }
     }
 
-    return true;
+    return $success;
 }
-
-
-
