@@ -2,11 +2,12 @@
 // stock_in.php
 require_once __DIR__ . '/config/db.php';
 
-
 $success = '';
 $errors = [];
 
-// Hapus mutasi
+// ============================
+// SINGLE DELETE
+// ============================
 if (isset($_GET['delete'])) {
   $id = (int) $_GET['delete'];
   if ($id > 0) {
@@ -20,7 +21,36 @@ if (isset($_GET['delete'])) {
   }
 }
 
-// Ambil data item untuk dropdown
+// ============================
+// BATCH DELETE
+// ============================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'batch_delete') {
+  $idsStr = $_POST['ids'] ?? '';
+  $idArr = array_filter(array_map('intval', explode(',', $idsStr)));
+
+  if (!$idArr) {
+    $errors[] = 'Tidak ada data yang dipilih untuk batch delete.';
+  } else {
+    $placeholders = implode(',', array_fill(0, count($idArr), '?'));
+    $sql = "DELETE FROM stock_movements WHERE movement_type = 'IN' AND id IN ($placeholders)";
+
+    try {
+      $stmt = $pdo->prepare($sql);
+      $stmt->execute($idArr);
+      $success = "Batch delete berhasil. Total " . count($idArr) . " data dihapus.";
+    } catch (Throwable $e) {
+      $errors[] = "Gagal batch delete: " . $e->getMessage();
+    }
+  }
+
+  // redirect agar tidak resubmit
+  header("Location: stock_in.php");
+  exit;
+}
+
+// ============================
+// DATA ITEM
+// ============================
 $items = $pdo->query("
     SELECT i.id, i.name, c.name AS category_name, u.code AS unit_code
     FROM items i
@@ -29,7 +59,9 @@ $items = $pdo->query("
     ORDER BY c.name, i.name
 ")->fetchAll();
 
-// Mode edit?
+// ============================
+// MODE EDIT
+// ============================
 $edit_id = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $edit_row = null;
 if ($edit_id > 0) {
@@ -43,8 +75,10 @@ if ($edit_id > 0) {
   $edit_row = $stmt->fetch();
 }
 
-// Handle submit (add or update)
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// ============================
+// ADD / UPDATE
+// ============================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== 'batch_delete') {
   $movement_id = (int) ($_POST['movement_id'] ?? 0);
   $item_id = (int) ($_POST['item_id'] ?? 0);
   $qty = (float) ($_POST['qty'] ?? 0);
@@ -63,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if (!$errors) {
     if ($movement_id > 0) {
-      // update
       $stmt = $pdo->prepare("
                 UPDATE stock_movements
                 SET item_id = :item_id,
@@ -81,7 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       ]);
       $success = 'Data barang masuk berhasil diupdate.';
     } else {
-      // insert baru
       $stmt = $pdo->prepare("
                 INSERT INTO stock_movements (item_id, movement_type, stock_type, qty, description)
                 VALUES (:item_id, 'IN', :stock_type, :qty, :description)
@@ -95,14 +127,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $success = 'Barang berhasil ditambahkan ke stok.';
     }
 
-    // redirect untuk hindari resubmit
     header('Location: stock_in.php');
     exit;
   }
 }
+
 require_once __DIR__ . '/partials/header.php';
 
-// Ambil 50 data IN terakhir
+// ============================
+// LOGS
+// ============================
 $logs = $pdo->query("
     SELECT sm.id, sm.movement_date, sm.qty, sm.stock_type, sm.description,
            i.name AS item_name, c.name AS category_name, u.code AS unit_code
@@ -137,7 +171,9 @@ $logs = $pdo->query("
   </div>
 <?php endif; ?>
 
+
 <div class="row g-3">
+  <!-- FORM -->
   <div class="col-12 col-lg-4">
     <div class="card">
       <div class="card-header">
@@ -145,9 +181,7 @@ $logs = $pdo->query("
       </div>
       <div class="card-body">
         <?php if (!$items): ?>
-          <div class="alert alert-warning">
-            Belum ada item. Tambahkan dulu di <strong>Master Barang</strong>.
-          </div>
+          <div class="alert alert-warning">Belum ada item.</div>
         <?php else: ?>
           <form method="post">
             <input type="hidden" name="movement_id" value="<?= $edit_row['id'] ?? 0 ?>">
@@ -162,7 +196,6 @@ $logs = $pdo->query("
                   </option>
                 <?php endforeach; ?>
               </select>
-
             </div>
 
             <div class="mb-3">
@@ -183,15 +216,13 @@ $logs = $pdo->query("
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Keterangan (opsional)</label>
+              <label class="form-label">Keterangan</label>
               <input type="text" name="description" class="form-control form-control-sm"
                 value="<?= htmlspecialchars($edit_row['description'] ?? '') ?>">
             </div>
 
             <div class="d-grid">
-              <button type="submit" class="btn btn-success btn-sm">
-                <?= $edit_row ? 'Simpan Perubahan' : 'Tambah Stok' ?>
-              </button>
+              <button class="btn btn-success btn-sm"><?= $edit_row ? 'Simpan Perubahan' : 'Tambah Stok' ?></button>
             </div>
           </form>
         <?php endif; ?>
@@ -199,17 +230,24 @@ $logs = $pdo->query("
     </div>
   </div>
 
+
+  <!-- TABLE -->
   <div class="col-12 col-lg-8">
     <div class="card">
-      <div class="card-header">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <strong>Riwayat Barang Masuk (50 terakhir)</strong>
+
+        <!-- Batch Delete Button -->
+        <button class="btn btn-sm btn-outline-danger" id="btnBatchDelete">Batch Delete</button>
       </div>
+
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-sm table-striped table-hover mb-0 align-middle datatable">
             <thead class="table-light">
               <tr class="text-center">
-                <th style="width:60px;">No</th>
+                <th><input type="checkbox" id="checkAll"></th>
+                <th>No</th>
                 <th>Waktu</th>
                 <th>Barang</th>
                 <th>Kategori</th>
@@ -217,34 +255,32 @@ $logs = $pdo->query("
                 <th>Stok</th>
                 <th class="text-end">Qty</th>
                 <th>Keterangan</th>
-                <th style="width:120px;">Aksi</th>
+                <th>Aksi</th>
               </tr>
             </thead>
+
             <tbody>
               <?php if ($logs): ?>
                 <?php $no = 1;
                 foreach ($logs as $log): ?>
                   <tr>
+                    <td class="text-center">
+                      <input type="checkbox" class="row-check" value="<?= $log['id'] ?>">
+                    </td>
                     <td class="text-center"><?= $no++ ?></td>
                     <td><?= htmlspecialchars($log['movement_date']) ?></td>
                     <td><?= htmlspecialchars($log['item_name']) ?></td>
-                    <td><?= htmlspecialchars($log['category_name']) ?></td>
+                    <td class="text-center"><?= htmlspecialchars($log['category_name']) ?></td>
                     <td class="text-center"><?= htmlspecialchars($log['unit_code']) ?></td>
-                    <td class="text-center">
-                      <span class="badge bg-dark"><?= htmlspecialchars($log['stock_type']) ?></span>
+                    <td class="text-center"><span class="badge bg-dark"><?= htmlspecialchars($log['stock_type']) ?></span>
                     </td>
-                    <td class="text-end">
-                      <?= rtrim(rtrim(number_format($log['qty'], 2, '.', ''), '0'), '.') ?>
-                    </td>
+                    <td class="text-end"><?= rtrim(rtrim(number_format($log['qty'], 2, '.', ''), '0'), '.') ?></td>
                     <td><?= htmlspecialchars($log['description']) ?></td>
+
                     <td class="text-center">
                       <div class="btn-group btn-group-sm">
                         <a href="stock_in.php?edit=<?= $log['id'] ?>" class="btn btn-outline-primary">Edit</a>
-                        <a href="stock_in.php?delete=<?= $log['id'] ?>" class="btn btn-outline-danger btn-delete"
-                          data-message="Hapus data barang masuk ini?">
-                          Hapus
-                        </a>
-
+                        <a href="stock_in.php?delete=<?= $log['id'] ?>" class="btn btn-outline-danger btn-delete">Hapus</a>
                       </div>
                     </td>
                   </tr>
@@ -254,9 +290,7 @@ $logs = $pdo->query("
           </table>
 
           <?php if (!$logs): ?>
-            <div class="p-3 text-center text-muted">
-              Belum ada data barang masuk.
-            </div>
+            <div class="p-3 text-center text-muted">Belum ada data.</div>
           <?php endif; ?>
 
         </div>
@@ -266,5 +300,72 @@ $logs = $pdo->query("
 </div>
 
 
+<!-- ============================
+     MODAL BATCH DELETE
+============================ -->
+<div class="modal fade" id="batchDeleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post">
+        <input type="hidden" name="action" value="batch_delete">
+        <input type="hidden" name="ids" id="batch-ids">
+
+        <div class="modal-header">
+          <h5 class="modal-title text-danger">Konfirmasi Batch Delete</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <p>Anda akan menghapus <strong><span id="batch-count">0</span></strong> data barang masuk.</p>
+          <p class="text-danger fw-bold">Tindakan ini tidak bisa dibatalkan.</p>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button class="btn btn-danger btn-sm">Hapus Semua</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+
+    // CHECK ALL
+    const checkAll = document.getElementById('checkAll');
+    const checks = Array.from(document.querySelectorAll('.row-check'));
+
+    if (checkAll) {
+      checkAll.addEventListener('change', () => {
+        checks.forEach(cb => cb.checked = checkAll.checked);
+      });
+    }
+
+    // BATCH DELETE
+    const batchBtn = document.getElementById('btnBatchDelete');
+    const batchIds = document.getElementById('batch-ids');
+    const batchCount = document.getElementById('batch-count');
+    const modalEl = document.getElementById('batchDeleteModal');
+
+    if (batchBtn) {
+      batchBtn.addEventListener('click', () => {
+        const selected = checks.filter(c => c.checked).map(c => c.value);
+
+        if (!selected.length) {
+          alert('Pilih minimal satu data untuk batch delete.');
+          return;
+        }
+
+        batchIds.value = selected.join(',');
+        batchCount.textContent = selected.length;
+
+        new bootstrap.Modal(modalEl).show();
+      });
+    }
+
+  });
+</script>
 
 <?php require_once __DIR__ . '/partials/footer.php'; ?>
