@@ -53,7 +53,7 @@ if (isset($update['callback_query'])) {
     /* ---------------- MENU: CEK STOK ---------------- */
     if ($data === "cekstok") {
         setState($chat_id, "CEK_STOK_KEYWORD");
-        sendMessage($chat_id, "🔎 *Cek Stok*\n\nSilakan kirim kata kunci item.");
+        sendMessage($chat_id, "🔎 *Cek Stok*\n\nSilahkan kirim kata kunci item.");
         exit;
     }
 
@@ -294,8 +294,17 @@ if ($state === "CEK_STOK_KEYWORD") {
         $reply .= "   Stok: *{$stok} {$r['unit_code']}*   Min: {$min} {$status}\n\n";
         $n++;
     }
-
-    sendMessage($chat_id, $reply);
+    $keyboard = [
+        "inline_keyboard" => [
+            [
+                ["text" => "🔎 Kembali ke Pencarian", "callback_data" => "cekstok"],
+            ],
+            [
+                ["text" => "⬅ Kembali ke Menu", "callback_data" => "menu"],
+            ]
+        ],
+    ];
+    sendMessage($chat_id, $reply, $keyboard);
     clearState($chat_id);
     exit;
 }
@@ -373,12 +382,19 @@ if ($state === "STOKMASUK_QTY") {
     $stmt->execute([$item_id, $qty]);
 
     clearState($chat_id);
-
+    $keyboard = [
+        "inline_keyboard" => [
+            [
+                ["text" => "⬅ Kembali ke Menu", "callback_data" => "menu"],
+            ]
+        ],
+    ];
     sendMessage(
         $chat_id,
         "✅ *Stok berhasil ditambahkan!*\n\n" .
         "Item ID: `{$item_id}`\n" .
-        "Jumlah: *{$qty}*"
+        "Jumlah: *{$qty}*",
+        $keyboard
     );
     exit;
 }
