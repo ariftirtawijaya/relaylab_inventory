@@ -196,12 +196,17 @@ if ($state === "STOKMASUK_KEYWORD") {
     $keyword = "%{$text}%";
 
     $stmt = $pdo->prepare("
-        SELECT id, name 
-        FROM items
-        WHERE name LIKE ?
-        ORDER BY name ASC
-        LIMIT 20
-    ");
+    SELECT 
+        i.id, 
+        i.name, 
+        u.code AS unit_code
+    FROM items i
+    JOIN units u ON u.id = i.unit_id
+    WHERE i.name LIKE ?
+    ORDER BY i.name ASC
+    LIMIT 20
+");
+
 
     $stmt->execute([$keyword]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -217,7 +222,7 @@ if ($state === "STOKMASUK_KEYWORD") {
     foreach ($items as $it) {
         $keyboard["inline_keyboard"][] = [
             [
-                "text" => $it['name'],
+                "text" => $it['name'] . " (" . $it['unit_code'] . ")",
                 "callback_data" => "pilihitem_" . $it['id']
             ]
         ];
