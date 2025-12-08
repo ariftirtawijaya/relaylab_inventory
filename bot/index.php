@@ -113,7 +113,7 @@ if (isset($update['callback_query'])) {
 
         sendMessage(
             $chat_id,
-            "Masukkan jumlah stok *keluar* untuk *{$item['name']} ({$item['unit']})*.\n" .
+            "Masukkan jumlah stok *keluar* untuk *{$item['name']} ({$item['unit_code']})*.\n" .
             "Stok tersedia: *{$item['stock_good']}*"
         );
         exit;
