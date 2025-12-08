@@ -238,7 +238,7 @@ require_once __DIR__ . '/partials/header.php';
 
                     <div class="mb-2">
                         <label class="form-label">Supplier</label>
-                        <select name="supplier_id" class="form-select form-select-sm" required>
+                        <select name="supplier_id" class="form-select form-select-sm select2-supplier" required>
                             <option value="">- Pilih Supplier -</option>
                             <?php foreach ($suppliers as $s): ?>
                                 <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?></option>
@@ -471,36 +471,60 @@ require_once __DIR__ . '/partials/header.php';
             poGrandTotalEl.textContent = formatIDR(grand);
         }
 
+        // -----------------------------
+        // SELECT2 INITIALIZER
+        // -----------------------------
+        function initSelect2() {
+            // Dropdown item
+            $('.select2-item').select2({
+                width: '100%',
+                placeholder: 'Cari item...',
+                allowClear: true
+            });
+
+            // Dropdown supplier
+            $('.select2-supplier').select2({
+                width: '100%',
+                placeholder: 'Cari supplier...',
+                allowClear: true
+            });
+        }
+
+
+        // -----------------------------
+        // CREATE ROW
+        // -----------------------------
         function createRow() {
             var tr = document.createElement('tr');
 
             tr.innerHTML = `
-      <td>
-        <select name="item_id[]" class="form-select form-select-sm" required>
-          <option value="">- Pilih Item -</option>
-          ${itemsData.map(function (it) {
-                var label = it.name + ' [' + it.category_name + ' / ' + it.unit_code + ']';
+                <td>
+                    <select name="item_id[]" class="form-select form-select-sm select2-item" required>
+                        <option value="">- Pilih Item -</option>
+                        ${itemsData.map(function (it) {
+                var label = it.name + ' (' + it.unit_code + ')';
                 return '<option value="' + it.id + '">' + label.replace(/"/g, '&quot;') + '</option>';
             }).join('')}
-        </select>
-      </td>
-      <td>
-        <input type="number" name="qty[]" class="form-control form-control-sm po-qty text-end"
-               step="0.0001" min="0">
-      </td>
-      <td>
-        <input type="number" name="unit_price[]" class="form-control form-control-sm po-price text-end"
-               step="0.01" min="0">
-      </td>
-      <td class="text-end">
-        <span class="po-subtotal-text">0</span>
-      </td>
-      <td class="text-center">
-        <button type="button" class="btn btn-sm btn-outline-danger po-remove-row">&times;</button>
-      </td>
-    `;
+                    </select>
+                </td>
+                <td>
+                    <input type="number" name="qty[]" class="form-control form-control-sm po-qty text-end"
+                        step="0.0001" min="0">
+                </td>
+                <td>
+                    <input type="number" name="unit_price[]" class="form-control form-control-sm po-price text-end"
+                        step="0.01" min="0">
+                </td>
+                <td class="text-end">
+                    <span class="po-subtotal-text">0</span>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger po-remove-row">&times;</button>
+                </td>
+            `;
 
             tbody.appendChild(tr);
+            initSelect2(); // ⬅ SELECT2 AKTIF OTOMATIS
         }
 
         btnAdd.addEventListener('click', function () {
@@ -528,11 +552,13 @@ require_once __DIR__ . '/partials/header.php';
             inp.addEventListener('input', recalcTotals);
         });
 
-        // baris default
+        // Buat satu baris awal
         createRow();
         recalcTotals();
+        initSelect2();
     });
 </script>
+
 
 <?php
 require_once __DIR__ . '/partials/footer.php';
