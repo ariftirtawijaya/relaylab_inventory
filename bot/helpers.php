@@ -93,3 +93,23 @@ function clearState($chat_id)
     if (file_exists($file))
         unlink($file);
 }
+
+function sendLongMessage($chat_id, $text, $reply_markup = null)
+{
+    $max = 3800; // aman dari limit Telegram (4096)
+
+    // jika pesan pendek → kirim biasa
+    if (strlen($text) <= $max) {
+        return sendMessage($chat_id, $text, $reply_markup);
+    }
+
+    // jika panjang → potong jadi beberapa bagian
+    $parts = str_split($text, $max);
+
+    foreach ($parts as $part) {
+        sendMessage($chat_id, $part);
+        usleep(150000); // jeda 0.15s biar aman dari flood limit
+    }
+
+    return true;
+}

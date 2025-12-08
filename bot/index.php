@@ -59,15 +59,58 @@ if (isset($update['callback_query'])) {
 
     /* ---------------- MENU: LOW STOCK ---------------- */
     if ($data === "lowstock") {
-        // Placeholder dulu, nanti bisa dikembangkan
-        sendMessage(
-            $chat_id,
-            "⚠️ *Low Stock*\n\n" .
-            "Fitur ini belum diaktifkan.\n" .
-            "Sementara, cek low stock dari web Inventory saja ya."
-        );
+
+        $stmt = $pdo->query("
+        SELECT 
+            i.name,
+            c.name AS category,
+            i.min_stock,
+            u.code AS unit_code,
+            COALESCE((SELECT SUM(qty) FROM stock_movements WHERE item_id=i.id AND movement_type='IN'),0)
+            -
+            COALESCE((SELECT SUM(qty) FROM stock_movements WHERE item_id=i.id AND movement_type='OUT'),0)
+            AS stock_good
+        FROM items i
+        JOIN categories c ON c.id = i.category_id
+        JOIN units u ON u.id = i.unit_id
+        HAVING stock_good < min_stock
+        ORDER BY c.name ASC, i.name ASC
+    ");
+
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!$rows) {
+            sendMessage($chat_id, "🎉 *Semua stok aman!*");
+            exit;
+        }
+
+        $reply = "⚠️ *DAFTAR LOW STOCK*\n(urut kategori)\n\n";
+
+        $current_cat = "";
+        $n = 1;
+
+        foreach ($rows as $r) {
+
+            $stok = rtrim(rtrim(number_format($r['stock_good'], 2, '.', ''), '0'), '.');
+            $min = rtrim(rtrim(number_format($r['min_stock'], 2, '.', ''), '0'), '.');
+
+            $status = $r['stock_good'] <= 0 ? "❌ *Habis*" : "⚠️";
+
+            if ($current_cat !== $r['category']) {
+                $current_cat = $r['category'];
+                $reply .= "【*{$current_cat}*】\n";
+            }
+
+            $reply .= "{$n}. *{$r['name']}*\n";
+            $reply .= "   Stok: *{$stok} {$r['unit_code']}* / Min: *{$min}* {$status}\n\n";
+
+            $n++;
+        }
+
+        sendLongMessage($chat_id, $reply);
         exit;
     }
+
 
     /* ---------------- MENU: CANCEL ---------------- */
     if ($data === "cancel") {
