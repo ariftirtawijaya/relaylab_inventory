@@ -1,82 +1,114 @@
 <?php
-file_put_contents(__DIR__ . "/test_log.txt", date("Y-m-d H:i:s") . " | RAW: " . file_get_contents("php://input") . "\n", FILE_APPEND);
-
 require_once __DIR__ . '/helpers.php';
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/menu.php';
+require_once __DIR__ . '/../config/db.php'; // koneksi DB inventory
 
-// Ambil update
 $update = getUpdate();
 
-// Jika update kosong → exit
-if (!$update)
-    exit("NO UPDATE");
+// Log untuk debugging
+file_put_contents(
+    __DIR__ . "/test_log.txt",
+    date("Y-m-d H:i:s") . " | RAW: " . json_encode($update) . "\n",
+    FILE_APPEND
+);
 
-// Deteksi jenis update
 $chat_id = $update['message']['chat']['id'] ?? null;
 $text = $update['message']['text'] ?? '';
 
-// Jika command "/menu"
+if (!$chat_id)
+    exit;
+
+// =========================
+//     MENU UTAMA
+// =========================
 if ($text === "/menu") {
-
-    $reply_markup = [
-        "keyboard" => [
-            [
-                ["text" => "📦 Cek Stok"],
-                ["text" => "📥 Input Stok Masuk"],
-            ],
-            [
-                ["text" => "📤 Input Stok Keluar"],
-                ["text" => "🔍 Cari Item"],
-            ],
-            [
-                ["text" => "⚠ Low Stock"]
-            ]
-        ],
-        "resize_keyboard" => true,
-        "one_time_keyboard" => false
-    ];
-
-    sendMessage($chat_id, "Pilih menu:", $reply_markup);
+    clearState($chat_id);
+    sendMessage($chat_id, "Pilih menu:", getMainMenu());
     exit;
 }
 
-// Handle tombol-tombol di keyboard
-switch ($text) {
+// =========================
+//   FITUR CEK STOK (START)
+// =========================
+if ($text === "📦 Cek Stok") {
+    clearState($chat_id);
 
-    case "📦 Cek Stok":
-        sendMessage($chat_id, "Masukkan nama item untuk cek stok:");
-        setState($chat_id, "CEK_STOK");
-        break;
+    setState($chat_id, "CEK_STOK_AWAIT_KEYWORD");
 
-    case "📥 Input Stok Masuk":
-        sendMessage($chat_id, "Masukkan item & jumlah (format: NAMA - JUMLAH)");
-        setState($chat_id, "STOK_IN");
-        break;
-
-    case "📤 Input Stok Keluar":
-        sendMessage($chat_id, "Masukkan item & jumlah (format: NAMA - JUMLAH)");
-        setState($chat_id, "STOK_OUT");
-        break;
-
-    case "🔍 Cari Item":
-        sendMessage($chat_id, "Ketik kata kunci item untuk pencarian:");
-        setState($chat_id, "SEARCH_ITEM");
-        break;
-
-    case "⚠ Low Stock":
-        require_once __DIR__ . "/handlers/low_stock.php";
-        break;
-
-    default:
-        // Jika sedang dalam state tertentu → route ke handler
-        $state = getState($chat_id);
-
-        if ($state) {
-            require_once __DIR__ . "/router_state.php";
-            exit;
-        }
-
-        // Tidak dikenali
-        sendMessage($chat_id, "Perintah tidak dikenali.\nKetik /menu untuk mulai.");
-        break;
+    sendMessage(
+        $chat_id,
+        "Silakan ketik nama item yang ingin dicek stoknya.\n\nContoh: *H11 Male*"
+    );
+    exit;
 }
+
+// =========================
+//   FITUR CEK STOK (PROSES)
+// =========================
+$state = getState($chat_id);
+
+if ($state && $state['state'] === "CEK_STOK_AWAIT_KEYWORD") {
+    $keyword = trim($text);
+
+    if ($keyword === "") {
+        sendMessage($chat_id, "Nama item tidak boleh kosong.");
+        exit;
+    }
+
+    // Cari item
+    $stmt = $pdo->prepare("
+        SELECT i.*, c.name AS category_name, u.code AS unit_code
+        FROM items i
+        JOIN categories c ON c.id = i.category_id
+        JOIN units u ON u.id = i.unit_id
+        WHERE i.name LIKE ?
+        LIMIT 5
+    ");
+    $stmt->execute(['%' . $keyword . '%']);
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$items) {
+        sendMessage(
+            $chat_id,
+            "Item *$keyword* tidak ditemukan.\nCoba kata lain."
+        );
+        exit;
+    }
+
+    // Jika hanya 1 hasil → tampilkan langsung
+    if (count($items) === 1) {
+        $it = $items[0];
+
+        $msg =
+            "🔎 *HASIL CEK STOK*\n\n" .
+            "*Nama:* {$it['name']}\n" .
+            "*Kategori:* {$it['category_name']}\n" .
+            "*Unit:* {$it['unit_code']}\n" .
+            "*Stok Baik:* " . number_format($it['stock_good'], 0, ',', '.') . "\n" .
+            "*Stok Rusak:* " . number_format($it['stock_bad'], 0, ',', '.') . "\n" .
+            "*Minimal:* " . number_format($it['min_stock'], 0, ',', '.') . "\n";
+
+        sendMessage($chat_id, $msg, getMainMenu());
+        clearState($chat_id);
+        exit;
+    }
+
+    // Jika lebih dari satu hasil → tampilkan list
+    $msg = "🔎 *Beberapa item ditemukan:* \n\n";
+
+    foreach ($items as $i) {
+        $msg .=
+            "• *{$i['name']}*\n" .
+            "   Stok: " . number_format($i['stock_good'], 0, ',', '.') . "\n\n";
+    }
+
+    $msg .= "_Ketik nama item lebih lengkap untuk detail._";
+
+    sendMessage($chat_id, $msg);
+    exit;
+}
+
+// =========================
+//  Fallback
+// =========================
+sendMessage($chat_id, "Gunakan /menu untuk melihat menu.");
