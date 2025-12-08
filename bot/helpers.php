@@ -3,44 +3,30 @@ require_once __DIR__ . '/config.php';
 
 /**
  * ============================================
- *  KIRIM PESAN KE TELEGRAM (SUPER STABLE)
- *  Menggunakan cURL agar tidak timeout di hosting
+ *  KIRIM PESAN TELEGRAM (PASTI TIDAK TIMEOUT)
+ *  Hanya menggunakan cURL — aman untuk webhook
  * ============================================
  */
 function sendMessage($chat_id, $text, $reply_markup = null)
 {
-    $token = BOT_TOKEN;
-    $url = "https://api.telegram.org/bot{$token}/sendMessage";
+    $url = API_URL . "sendMessage";
 
-    $data = [
-        'chat_id' => $chat_id,
-        'text' => $text,
-        'parse_mode' => 'Markdown'
+    $params = [
+        "chat_id" => $chat_id,
+        "text" => $text,
+        "parse_mode" => "Markdown"
     ];
 
     if ($reply_markup) {
-        $data['reply_markup'] = json_encode($reply_markup);
+        $params["reply_markup"] = json_encode($reply_markup);
     }
 
-    $options = [
-        'http' => [
-            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-            'method' => 'POST',
-            'content' => http_build_query($data),
-            'timeout' => 10
-        ]
-    ];
-
-    $context = stream_context_create($options);
-
-    return file_get_contents($url, false, $context);
+    return tgRequest($url, $params);
 }
-
 
 /**
  * ============================================
- *  CURL WRAPPER — PENGGANTI file_get_contents
- *  Timeout cepat (5 detik), aman untuk webhook
+ *  CURL WRAPPER
  * ============================================
  */
 function tgRequest($url, $params)
@@ -51,8 +37,8 @@ function tgRequest($url, $params)
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $params,
-        CURLOPT_TIMEOUT => 5,             // mencegah timeout 10 detik webhook Telegram
-        CURLOPT_SSL_VERIFYPEER => false,  // hosting shared sering masalah SSL
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_SSL_VERIFYHOST => false,
     ]);
 
@@ -70,7 +56,7 @@ function tgRequest($url, $params)
 
 /**
  * ============================================
- *  AMBIL UPDATE WEBHOOK
+ *  AMBIL UPDATE DARI TELEGRAM
  * ============================================
  */
 function getUpdate()
@@ -81,7 +67,7 @@ function getUpdate()
 
 /**
  * ============================================
- *  STATE MANAGEMENT (SIMPEL)
+ *  STATE MANAGEMENT
  * ============================================
  */
 function setState($chat_id, $state, $data = [])
