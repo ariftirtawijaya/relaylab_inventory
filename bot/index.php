@@ -1,29 +1,22 @@
 <?php
+file_put_contents(__DIR__ . "/test_log.txt", date("Y-m-d H:i:s") . " | RAW: " . file_get_contents("php://input") . "\n", FILE_APPEND);
+
 require_once __DIR__ . '/helpers.php';
-require_once __DIR__ . '/handlers/command_menu.php';
-require_once __DIR__ . '/handlers/callback.php';
-require_once __DIR__ . '/handlers/text.php';
 
 $update = getUpdate();
 
-if (!$update)
+if (!$update) {
+    sendMessage(318416641, "Webhook OK tapi update kosong.");
     exit;
-
-// Pesan dari user
-if (isset($update['message'])) {
-    $chat_id = $update['message']['chat']['id'];
-    $text = $update['message']['text'] ?? '';
-
-    if ($text === '/menu') {
-        handleMenu($chat_id);
-    } else {
-        handleText($chat_id, $text);
-    }
 }
 
-// Callback tombol
-elseif (isset($update['callback_query'])) {
-    handleCallback($update['callback_query']);
+$chat_id = $update['message']['chat']['id'] ?? null;
+$text = $update['message']['text'] ?? '';
+
+if ($text === "/menu") {
+    sendMessage($chat_id, "Menu berhasil muncul! 🎉");
+    exit;
 }
 
-echo "OK";
+// fallback
+sendMessage($chat_id, "Perintah tidak dikenali.");
