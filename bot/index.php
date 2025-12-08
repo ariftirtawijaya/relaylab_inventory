@@ -374,13 +374,20 @@ if ($state === "STOKKELUAR_QTY") {
     ]);
 
     $sisa = $d["stock_good"] - $d["qty"];
-
+    $keyboard = [
+        "inline_keyboard" => [
+            [
+                ["text" => "Kembali Ke Menu", "callback_data" => "menu"]
+            ]
+        ]
+    ];
     sendMessage(
         $chat_id,
         "✔ *Stok berhasil dikurangi!*\n\n" .
         "Item: *{$d['name']} ({$d['unit']})*\n" .
         "Jumlah keluar: *{$d['qty']}*\n" .
-        "Sisa stok: *{$sisa} {$d['unit']}*"
+        "Sisa stok: *{$sisa} {$d['unit']}*",
+        $keyboard
     );
 
     clearState($chat_id);
