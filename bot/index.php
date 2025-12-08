@@ -369,7 +369,7 @@ if ($state === "STOKKELUAR_QTY") {
     ");
     $stmt->execute([
         $d["item_id"],
-        $d["qty"],
+        $qty,
         'Update stock dari Telegram'
     ]);
 
