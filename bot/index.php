@@ -106,8 +106,15 @@ if (isset($update['callback_query'])) {
 
             $n++;
         }
+        $keyboard = [
+            "inline_keyboard" => [
+                [
+                    ["text" => "⬅ Kembali ke Menu", "callback_data" => "menu"],
+                ]
+            ],
+        ];
 
-        sendLongMessage($chat_id, $reply);
+        sendLongMessage($chat_id, $reply, $keyboard);
         exit;
     }
 
