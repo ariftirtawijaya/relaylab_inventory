@@ -7,10 +7,9 @@ $update = getUpdate();
 if (!$update)
     exit;
 
-
-// ======================================================
-//  HANDLE CALLBACK BUTTON
-// ======================================================
+/* =======================================================
+   ===============  HANDLE CALLBACK BUTTON  ===============
+   ======================================================= */
 if (isset($update['callback_query'])) {
 
     $chat_id = $update['callback_query']['message']['chat']['id'];
@@ -18,23 +17,25 @@ if (isset($update['callback_query'])) {
 
     sendMessage($chat_id, "⏳ Memproses...");
 
-    // ---- MENU: Cek Stok ----
+    /* ---------------- MENU: CEK STOK ---------------- */
     if ($data === "cekstok") {
         setState($chat_id, "CEK_STOK_KEYWORD");
         sendMessage($chat_id, "🔎 *Cek Stok*\n\nSilakan kirim kata kunci item.");
         exit;
     }
 
-    // ---- MENU: Cancel ----
+    /* ---------------- MENU: CANCEL ---------------- */
     if ($data === "cancel") {
         clearState($chat_id);
         sendMessage($chat_id, "❌ Aksi dibatalkan.\nKetik /menu untuk kembali.");
         exit;
     }
 
-    // ==========================================================
-    //  STOK MASUK — STEP 1: USER MENEKAN TOMBOL "Stok Masuk"
-    // ==========================================================
+    /* ==========================================================
+       ==================== STOK MASUK ===========================
+       ========================================================== */
+
+    // STEP 1: USER TEKAN "Stok Masuk"
     if ($data === "stokmasuk") {
 
         setState($chat_id, "STOKMASUK_KEYWORD");
@@ -47,17 +48,74 @@ if (isset($update['callback_query'])) {
         exit;
     }
 
-    // ==========================================================
-    //  STOK MASUK — STEP 3: USER PILIH ITEM
-    // ==========================================================
+    // STEP 3: USER PILIH ITEM UNTUK STOK MASUK
     if (str_starts_with($data, "pilihitem_")) {
 
         $item_id = (int) str_replace("pilihitem_", "", $data);
 
-        // simpan state
         setState($chat_id, "STOKMASUK_QTY", ["item_id" => $item_id]);
 
-        sendMessage($chat_id, "Masukkan jumlah stok yang akan ditambahkan:");
+        sendMessage($chat_id, "Masukkan jumlah stok yang akan *ditambahkan*:");
+        exit;
+    }
+
+    /* ==========================================================
+       ==================== STOK KELUAR ==========================
+       ========================================================== */
+
+    // STEP 1: USER TEKAN "Stok Keluar"
+    if ($data === "stokkeluar") {
+
+        setState($chat_id, "STOKKELUAR_KEYWORD");
+
+        sendMessage(
+            $chat_id,
+            "➖ *Stok Keluar*\n\n" .
+            "Silakan kirim *kata kunci* item yang ingin dikurangi stoknya.\n\nContoh:\n`h11`\n`kabel`\n`skun`"
+        );
+        exit;
+    }
+
+    // STEP 3: USER PILIH ITEM UNTUK STOK KELUAR
+    if (str_starts_with($data, "keluaritem_")) {
+
+        $item_id = (int) str_replace("keluaritem_", "", $data);
+
+        // ambil data item & stok
+        $stmt = $pdo->prepare("
+            SELECT 
+                i.id,
+                i.name,
+                u.code AS unit_code,
+                COALESCE((SELECT SUM(qty) FROM stock_movements WHERE item_id=i.id AND movement_type='IN'),0)
+                -
+                COALESCE((SELECT SUM(qty) FROM stock_movements WHERE item_id=i.id AND movement_type='OUT'),0)
+                AS stock_good
+            FROM items i
+            JOIN units u ON u.id = i.unit_id
+            WHERE i.id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$item_id]);
+        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$item) {
+            sendMessage($chat_id, "❌ Item tidak ditemukan.");
+            exit;
+        }
+
+        setState($chat_id, "STOKKELUAR_QTY", [
+            "item_id" => $item["id"],
+            "name" => $item["name"],
+            "unit" => $item["unit_code"],
+            "stock_good" => $item["stock_good"]
+        ]);
+
+        sendMessage(
+            $chat_id,
+            "Masukkan jumlah stok *keluar* untuk *{$item['name']} ({$item['unit']})*.\n" .
+            "Stok tersedia: *{$item['stock_good']}*"
+        );
         exit;
     }
 
@@ -65,9 +123,10 @@ if (isset($update['callback_query'])) {
 }
 
 
-// ======================================================
-// HANDLE NORMAL CHAT MESSAGE
-// ======================================================
+/* =======================================================
+   ===============  HANDLE NORMAL MESSAGE  ===============
+   ======================================================= */
+
 $chat_id = $update['message']['chat']['id'] ?? null;
 $text = trim($update['message']['text'] ?? '');
 
@@ -78,9 +137,9 @@ $stateData = getState($chat_id);
 $state = $stateData['state'] ?? null;
 
 
-// ======================================================
-// /MENU → tombol utama
-// ======================================================
+/* ======================================================
+   ======================== MENU =========================
+   ====================================================== */
 if ($text === "/menu") {
 
     clearState($chat_id);
@@ -108,9 +167,9 @@ if ($text === "/menu") {
 }
 
 
-// ======================================================
-// CANCEL
-// ======================================================
+/* ======================================================
+   ======================== CANCEL =======================
+   ====================================================== */
 if ($text === "/cancel") {
     clearState($chat_id);
     sendMessage($chat_id, "❌ Proses dibatalkan.");
@@ -118,19 +177,15 @@ if ($text === "/cancel") {
 }
 
 
-// ======================================================
-// /cekstok
-// ======================================================
+/* ======================================================
+   ======================== CEK STOK ======================
+   ====================================================== */
 if ($text === "/cekstok") {
     setState($chat_id, "CEK_STOK_KEYWORD");
     sendMessage($chat_id, "🔎 Kirim kata kunci pencarian:");
     exit;
 }
 
-
-// ======================================================
-// CEK STOCK KEYWORD MODE
-// ======================================================
 if ($state === "CEK_STOK_KEYWORD") {
 
     $keyword = "%{$text}%";
@@ -176,7 +231,6 @@ if ($state === "CEK_STOK_KEYWORD") {
 
         $reply .= "{$n}. *{$r['name']}*\n";
         $reply .= "   Stok: *{$stok} {$r['unit_code']}*   Min: {$min} {$status}\n\n";
-
         $n++;
     }
 
@@ -186,37 +240,34 @@ if ($state === "CEK_STOK_KEYWORD") {
 }
 
 
-// ======================================================
-// ================= STOK MASUK =========================
-// ======================================================
+/* ======================================================
+   ======================= STOK MASUK ====================
+   ====================================================== */
 
-// STEP 2: USER KIRIM KEYWORD
+// STEP 2: KEYWORD
 if ($state === "STOKMASUK_KEYWORD") {
 
     $keyword = "%{$text}%";
 
     $stmt = $pdo->prepare("
-    SELECT 
-        i.id, 
-        i.name, 
-        u.code AS unit_code
-    FROM items i
-    JOIN units u ON u.id = i.unit_id
-    WHERE i.name LIKE ?
-    ORDER BY i.name ASC
-    LIMIT 20
-");
-
-
+        SELECT 
+            i.id, 
+            i.name,
+            u.code AS unit_code
+        FROM items i
+        JOIN units u ON u.id = i.unit_id
+        WHERE i.name LIKE ?
+        ORDER BY i.name ASC
+        LIMIT 20
+    ");
     $stmt->execute([$keyword]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (!$items) {
-        sendMessage($chat_id, "❌ Tidak ada item ditemukan untuk keyword: *{$text}*");
+        sendMessage($chat_id, "❌ Tidak ada item untuk keyword: *{$text}*");
         exit;
     }
 
-    // Generate button list
     $keyboard = ["inline_keyboard" => []];
 
     foreach ($items as $it) {
@@ -228,12 +279,12 @@ if ($state === "STOKMASUK_KEYWORD") {
         ];
     }
 
-    sendMessage($chat_id, "Pilih item yang ingin ditambah stoknya:", $keyboard);
+    sendMessage($chat_id, "Pilih item yang ingin *ditambah* stoknya:", $keyboard);
     exit;
 }
 
 
-// STEP 4: USER INPUT QTY
+// STEP 4: INPUT QTY
 if ($state === "STOKMASUK_QTY") {
 
     if (!is_numeric($text) || $text <= 0) {
@@ -244,7 +295,6 @@ if ($state === "STOKMASUK_QTY") {
     $qty = (float) $text;
     $item_id = $stateData['data']['item_id'];
 
-    // INSERT STOCK IN
     $stmt = $pdo->prepare("
         INSERT INTO stock_movements (item_id, movement_date, movement_type, stock_type, qty, description)
         VALUES (?, NOW(), 'IN', 'GOOD', ?, 'Stok Masuk via Telegram')
@@ -261,7 +311,119 @@ if ($state === "STOKMASUK_QTY") {
 }
 
 
-// ======================================================
-// FALLBACK
-// ======================================================
+/* ======================================================
+   ======================= STOK KELUAR ====================
+   ====================================================== */
+
+// STEP 2: KEYWORD
+if ($state === "STOKKELUAR_KEYWORD") {
+
+    $keyword = "%{$text}%";
+
+    $stmt = $pdo->prepare("
+        SELECT 
+            i.id,
+            i.name,
+            u.code AS unit_code
+        FROM items i
+        JOIN units u ON u.id = i.unit_id
+        WHERE i.name LIKE ?
+        ORDER BY i.name ASC
+        LIMIT 20
+    ");
+    $stmt->execute([$keyword]);
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$items) {
+        sendMessage($chat_id, "❌ Tidak ada item ditemukan untuk: *{$text}*");
+        exit;
+    }
+
+    $keyboard = ["inline_keyboard" => []];
+
+    foreach ($items as $it) {
+        $keyboard["inline_keyboard"][] = [
+            [
+                "text" => $it["name"] . " (" . $it["unit_code"] . ")",
+                "callback_data" => "keluaritem_" . $it["id"]
+            ]
+        ];
+    }
+
+    sendMessage($chat_id, "Pilih item yang akan *dikurangi* stoknya:", $keyboard);
+    exit;
+}
+
+
+// STEP 4: INPUT QTY STOK KELUAR
+if ($state === "STOKKELUAR_QTY") {
+
+    $d = $stateData["data"];
+
+    if (!is_numeric($text) || $text <= 0) {
+        sendMessage($chat_id, "❌ Jumlah tidak valid. Masukkan angka > 0.");
+        exit;
+    }
+
+    $qty = (float) $text;
+
+    if ($qty > $d["stock_good"]) {
+        sendMessage($chat_id, "❌ Stok tidak cukup!\nStok tersedia hanya *{$d['stock_good']}*.");
+        exit;
+    }
+
+    setState($chat_id, "STOKKELUAR_NOTE", [
+        "item_id" => $d["item_id"],
+        "name" => $d["name"],
+        "unit" => $d["unit"],
+        "qty" => $qty,
+        "stock_good" => $d["stock_good"]
+    ]);
+
+    sendMessage($chat_id, "Tulis *keterangan* untuk stok keluar ini:");
+    exit;
+}
+
+
+// STEP 5: SIMPAN STOK KELUAR
+if ($state === "STOKKELUAR_NOTE") {
+
+    $d = $stateData["data"];
+
+    $note = trim($text);
+    if (!$note) {
+        sendMessage($chat_id, "❌ Keterangan tidak boleh kosong.");
+        exit;
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO stock_movements 
+        (item_id, movement_date, movement_type, stock_type, qty, description)
+        VALUES (?, NOW(), 'OUT', 'GOOD', ?, ?)
+    ");
+    $stmt->execute([
+        $d["item_id"],
+        $d["qty"],
+        $note
+    ]);
+
+    $sisa = $d["stock_good"] - $d["qty"];
+
+    sendMessage(
+        $chat_id,
+        "✔ *Stok berhasil dikurangi!*\n\n" .
+        "Item: *{$d['name']} ({$d['unit']})*\n" .
+        "Jumlah keluar: *{$d['qty']}*\n" .
+        "Sisa stok: *{$sisa} {$d['unit']}*\n\n" .
+        "_Keterangan:_ {$note}"
+    );
+
+    clearState($chat_id);
+    exit;
+}
+
+
+/* ======================================================
+   ======================== FALLBACK =====================
+   ====================================================== */
 sendMessage($chat_id, "Perintah tidak dikenali.\nKetik /menu untuk melihat pilihan.");
