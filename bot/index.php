@@ -70,13 +70,27 @@ if ($state === "CEK_STOK_KEYWORD") {
     $keyword = "%{$text}%";
 
     $stmt = $pdo->prepare("
-        SELECT i.name, i.stock_good, i.min_stock, u.code
-        FROM items i
-        JOIN units u ON u.id = i.unit_id
-        WHERE i.name LIKE ?
-        ORDER BY i.name ASC
-        LIMIT 20
-    ");
+    SELECT 
+        i.id,
+        i.name,
+        i.min_stock,
+        u.code AS unit_code,
+        COALESCE((
+            SELECT SUM(qty) FROM stock_movements 
+            WHERE item_id = i.id AND movement_type = 'IN'
+        ), 0)
+        -
+        COALESCE((
+            SELECT SUM(qty) FROM stock_movements 
+            WHERE item_id = i.id AND movement_type = 'OUT'
+        ), 0) AS stock_good
+    FROM items i
+    JOIN units u ON u.id = i.unit_id
+    WHERE i.name LIKE ?
+    ORDER BY i.name ASC
+    LIMIT 20
+");
+
 
     $stmt->execute([$keyword]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
