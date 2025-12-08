@@ -176,16 +176,6 @@ if ($text === "/cancel") {
     exit;
 }
 
-
-/* ======================================================
-   ======================== CEK STOK ======================
-   ====================================================== */
-if ($text === "/cekstok") {
-    setState($chat_id, "CEK_STOK_KEYWORD");
-    sendMessage($chat_id, "🔎 Kirim kata kunci pencarian:");
-    exit;
-}
-
 if ($state === "CEK_STOK_KEYWORD") {
 
     $keyword = "%{$text}%";
@@ -372,30 +362,6 @@ if ($state === "STOKKELUAR_QTY") {
         exit;
     }
 
-    setState($chat_id, "STOKKELUAR_NOTE", [
-        "item_id" => $d["item_id"],
-        "name" => $d["name"],
-        "unit" => $d["unit"],
-        "qty" => $qty,
-        "stock_good" => $d["stock_good"]
-    ]);
-
-    sendMessage($chat_id, "Tulis *keterangan* untuk stok keluar ini:");
-    exit;
-}
-
-
-// STEP 5: SIMPAN STOK KELUAR
-if ($state === "STOKKELUAR_NOTE") {
-
-    $d = $stateData["data"];
-
-    $note = trim($text);
-    if (!$note) {
-        sendMessage($chat_id, "❌ Keterangan tidak boleh kosong.");
-        exit;
-    }
-
     $stmt = $pdo->prepare("
         INSERT INTO stock_movements 
         (item_id, movement_date, movement_type, stock_type, qty, description)
@@ -404,7 +370,7 @@ if ($state === "STOKKELUAR_NOTE") {
     $stmt->execute([
         $d["item_id"],
         $d["qty"],
-        $note
+        'Update stock dari Telegram'
     ]);
 
     $sisa = $d["stock_good"] - $d["qty"];
@@ -414,14 +380,12 @@ if ($state === "STOKKELUAR_NOTE") {
         "✔ *Stok berhasil dikurangi!*\n\n" .
         "Item: *{$d['name']} ({$d['unit']})*\n" .
         "Jumlah keluar: *{$d['qty']}*\n" .
-        "Sisa stok: *{$sisa} {$d['unit']}*\n\n" .
-        "_Keterangan:_ {$note}"
+        "Sisa stok: *{$sisa} {$d['unit']}*"
     );
 
     clearState($chat_id);
     exit;
 }
-
 
 /* ======================================================
    ======================== FALLBACK =====================
