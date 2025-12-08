@@ -117,7 +117,7 @@ if ($state === "CEK_STOK_KEYWORD") {
             $status = "";
         }
 
-        $reply .= "{$n}. *{$r['name']}*\n   Stok: *{$stok} {$r['code']}*   Min: {$min}   {$status}\n\n";
+        $reply .= "{$n}. *{$r['name']}*\n   Stok: *{$stok} {$r['unit_code']}*   Min: {$min}   {$status}\n\n";
         $n++;
     }
 
