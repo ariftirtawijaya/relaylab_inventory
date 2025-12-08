@@ -9,20 +9,33 @@ require_once __DIR__ . '/config.php';
  */
 function sendMessage($chat_id, $text, $reply_markup = null)
 {
-    $url = API_URL . "sendMessage";
+    $token = BOT_TOKEN;
+    $url = "https://api.telegram.org/bot{$token}/sendMessage";
 
-    $params = [
-        "chat_id" => $chat_id,
-        "text" => $text,
-        "parse_mode" => "Markdown"
+    $data = [
+        'chat_id' => $chat_id,
+        'text' => $text,
+        'parse_mode' => 'Markdown'
     ];
 
     if ($reply_markup) {
-        $params["reply_markup"] = json_encode($reply_markup);
+        $data['reply_markup'] = json_encode($reply_markup);
     }
 
-    return tgRequest($url, $params);
+    $options = [
+        'http' => [
+            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+            'method' => 'POST',
+            'content' => http_build_query($data),
+            'timeout' => 10
+        ]
+    ];
+
+    $context = stream_context_create($options);
+
+    return file_get_contents($url, false, $context);
 }
+
 
 /**
  * ============================================
