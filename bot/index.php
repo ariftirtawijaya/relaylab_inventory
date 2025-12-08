@@ -7,19 +7,21 @@ $update = getUpdate();
 if (!$update)
     exit;
 
+
 // ======================================================
-// Handle CALLBACK BUTTON
+//  HANDLE CALLBACK BUTTON
 // ======================================================
 if (isset($update['callback_query'])) {
 
     $chat_id = $update['callback_query']['message']['chat']['id'];
     $data = $update['callback_query']['data'];
 
-    // Hapus loading di Telegram
+    // Untuk mempercepat respon user
     sendMessage($chat_id, "⏳ Memproses...");
 
     // ---- MENU: Cek Stok ----
     if ($data === "cekstok") {
+
         setState($chat_id, "CEK_STOK_KEYWORD");
 
         sendMessage(
@@ -32,14 +34,14 @@ if (isset($update['callback_query'])) {
         exit;
     }
 
-    // ---- MENU: Cancel ----
+    // ---- MENU: CANCEL ----
     if ($data === "cancel") {
         clearState($chat_id);
         sendMessage($chat_id, "❌ Aksi dibatalkan.\nKetik /menu untuk kembali.");
         exit;
     }
 
-    // ---- MENU lain belum aktif ----
+    // ---- Belum diaktifkan ----
     if ($data === "stokmasuk") {
         sendMessage($chat_id, "🚧 *Fitur Stok Masuk belum diaktifkan.*");
         exit;
@@ -60,7 +62,7 @@ if (isset($update['callback_query'])) {
 
 
 // ======================================================
-// NORMAL CHAT MESSAGE
+// HANDLE NORMAL CHAT MESSAGE
 // ======================================================
 $chat_id = $update['message']['chat']['id'] ?? null;
 $text = trim($update['message']['text'] ?? '');
@@ -73,7 +75,7 @@ $state = getState($chat_id)['state'] ?? null;
 
 
 // ======================================================
-// /MENU → tampilkan tombol cantik
+// /MENU → Tampilkan tombol cantik
 // ======================================================
 if ($text === "/menu") {
 
@@ -97,7 +99,7 @@ if ($text === "/menu") {
         ]
     ];
 
-    sendMessage($chat_id, "*🗂 MENU UTAMA*\nSilakan pilih:", $keyboard);
+    sendMessage($chat_id, "*🗂 MENU UTAMA*\nSilakan pilih perintah:", $keyboard);
     exit;
 }
 
@@ -113,7 +115,7 @@ if ($text === "/cancel") {
 
 
 // ======================================================
-// 1️⃣ USER ketik /cekstok → minta keyword
+// /cekstok → langsung masuk mode pencarian
 // ======================================================
 if ($text === "/cekstok") {
 
@@ -128,7 +130,7 @@ if ($text === "/cekstok") {
 
 
 // ======================================================
-// 2️⃣ Mode pencarian stok
+// MODE PENCARIAN STOK
 // ======================================================
 if ($state === "CEK_STOK_KEYWORD") {
 
@@ -175,7 +177,9 @@ if ($state === "CEK_STOK_KEYWORD") {
             $status = "";
         }
 
-        $reply .= "{$n}. *{$r['name']}*\n   Stok: *{$stok} {$r['unit_code']}*   Min: {$min}   {$status}\n\n";
+        $reply .= "{$n}. *{$r['name']}*\n";
+        $reply .= "   Stok: *{$stok} {$r['unit_code']}*   Min: {$min}   {$status}\n\n";
+
         $n++;
     }
 
