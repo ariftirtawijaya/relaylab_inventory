@@ -2,7 +2,7 @@
 // get_groups.php
 // Ambil daftar grup dari Fonnte setelah fetch-group sukses
 
-$token = "TOKEN_ANDA"; // ganti token Fonnte Anda
+$token = "yNuNwRkmU8L4YDyF1NQi"; // ganti token Fonnte Anda
 
 $curl = curl_init();
 curl_setopt_array($curl, array(
