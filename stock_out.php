@@ -1,7 +1,7 @@
 <?php
 // stock_out.php
 require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/partials/header.php';
+
 
 $success = '';
 $errors = [];
@@ -99,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
   }
 }
+require_once __DIR__ . '/partials/header.php';
 
 // Ambil 50 data OUT terakhir
 $logs = $pdo->query("
