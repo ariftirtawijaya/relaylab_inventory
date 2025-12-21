@@ -153,7 +153,7 @@ $logs = $pdo->query("
 
             <div class="mb-3">
               <label class="form-label">Pilih Barang</label>
-              <select name="item_id" class="form-select form-select-sm" required>
+              <select name="item_id" class="form-select form-select-sm select2-item" required>
                 <option value="">-- Pilih Barang --</option>
                 <?php foreach ($items as $it): ?>
                   <option value="<?= $it['id'] ?>" <?= isset($edit_row['item_id']) && $edit_row['item_id'] == $it['id'] ? 'selected' : '' ?>>
