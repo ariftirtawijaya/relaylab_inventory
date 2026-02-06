@@ -73,6 +73,7 @@
                                 <hr class="dropdown-divider">
                             </li>
                             <li><a class="dropdown-item" href="produce.php">Produksi</a></li>
+                            <li><a class="dropdown-item" href="stock_reset.php">Stok Reset</a></li>
                         </ul>
                     </li>
 
